@@ -18,6 +18,7 @@ jobs:
           python-version: "3.11"
 
       - run: pip install -e . pip-audit
+      - run: pip install --upgrade pip setuptools wheel
       - run: pip-audit --skip-editable
 
   npm-audit:
