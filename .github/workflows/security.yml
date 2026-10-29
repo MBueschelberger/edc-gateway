@@ -17,8 +17,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install . pip-audit
-      - run: pip-audit --exclude edc-gateway
+      - run: pip install -e . pip-audit
+      - run: pip-audit --skip-editable
 
   npm-audit:
     runs-on: ubuntu-latest
