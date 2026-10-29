@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "edc-gateway"
-version = "0.0.0"
+version = "1.0.0"
 requires-python = ">=3.11"
 license = "BSD-3-Clause"
 dependencies = [
@@ -58,7 +58,7 @@ line_length = 100
 exclude_dirs = ["tests", "migrations"]
 
 [tool.bumpver]
-current_version = "0.0.0"
+current_version = "1.0.0"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "bump version {old_version} -> {new_version}"
 tag_message = "{new_version}"
