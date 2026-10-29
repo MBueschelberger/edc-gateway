@@ -1,0 +1,143 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: consume-asset
+  namespace: argo
+spec:
+  entrypoint: consume
+  serviceAccountName: argo
+  imagePullSecrets:
+    - name: docker-registry
+  arguments:
+    parameters:
+      - name: edc_id
+      - name: asset_id
+      - name: consumer_url
+      - name: provider_did
+      - name: provider_bpn
+      - name: provider_dsp_url
+      - name: use_2025_1
+        value: "false"
+      - name: use_edrs
+        value: "true"
+      - name: use_bpn
+        value: "false"
+      - name: contract_negotiation_router
+        value: "edrs"
+      - name: add_membership
+        value: "false"
+      - name: debug
+        value: "false"
+
+  templates:
+    - name: consume
+      inputs:
+        parameters:
+          - name: edc_id
+          - name: asset_id
+          - name: consumer_url
+          - name: provider_did
+          - name: provider_bpn
+          - name: provider_dsp_url
+          - name: use_2025_1
+          - name: use_edrs
+          - name: use_bpn
+          - name: contract_negotiation_router
+          - name: add_membership
+          - name: debug
+      container:
+        image: container-registry.gitlab.cc-asp.fraunhofer.de/sit/edc-gateway/workflows:latest
+        imagePullPolicy: Always
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            export OAUTH2_GRANT_TYPE="${OAUTH2_GRANT_TYPE:-client_credentials}"
+            bash /scripts/consume-asset.sh "{{inputs.parameters.asset_id}}"
+        env:
+          - name: CONSUMER_URL
+            value: "{{inputs.parameters.consumer_url}}"
+          - name: PROVIDER_DID
+            value: "{{inputs.parameters.provider_did}}"
+          - name: PROVIDER_BPN
+            value: "{{inputs.parameters.provider_bpn}}"
+          - name: PROVIDER_DSP_URL
+            value: "{{inputs.parameters.provider_dsp_url}}"
+          - name: USE_2025_1
+            value: "{{inputs.parameters.use_2025_1}}"
+          - name: USE_EDRS
+            value: "{{inputs.parameters.use_edrs}}"
+          - name: USE_BPN
+            value: "{{inputs.parameters.use_bpn}}"
+          - name: CONTRACT_NEGOTATION_ROUTER
+            value: "{{inputs.parameters.contract_negotiation_router}}"
+          - name: ADD_MEMBERSHIP_ACTIVE
+            value: "{{inputs.parameters.add_membership}}"
+          - name: DEBUG
+            value: "{{inputs.parameters.debug}}"
+          - name: CONSUMER_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: consumer_api_key
+                optional: true
+          - name: PROVIDER_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: provider_api_key
+                optional: true
+          - name: CLIENT_CERT_PATH
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: client_cert_path
+                optional: true
+          - name: CLIENT_CERT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: client_cert_password
+                optional: true
+          - name: OAUTH2_TOKEN_URL
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: oauth2_token_url
+                optional: true
+          - name: OAUTH2_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: oauth2_client_id
+                optional: true
+          - name: OAUTH2_CLIENT_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: oauth2_client_secret_key
+                optional: true
+          - name: OAUTH2_GRANT_TYPE
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: oauth2_grant_type
+                optional: true
+      outputs:
+        parameters:
+          - name: asset_title
+            valueFrom:
+              path: /tmp/asset_title.txt
+          - name: asset_description
+            valueFrom:
+              path: /tmp/asset_description.txt
+          - name: output_filename
+            valueFrom:
+              path: /tmp/output_filename.txt
+          - name: content_type
+            valueFrom:
+              path: /tmp/content_type.txt
+        artifacts:
+          - name: asset-data
+            path: /tmp/asset-data
+            archive:
+              none: {}

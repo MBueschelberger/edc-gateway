@@ -1,0 +1,41 @@
+services:
+  nginx:
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./:/app:rw
+    # tty: true
+    # entrypoint: "/bin/bash"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app:rw
+    environment:
+      BACKEND_URL: http://api:8000
+      # VITE_KEYCLOAK_URL: https://${KC_EXTERNAL_HOSTNAME}/auth
+      VITE_KEYCLOAK_URL: https://${KC_EXTERNAL_HOSTNAME}
+      VITE_KEYCLOAK_REALM: ${KC_REALM:-edc}
+      VITE_KEYCLOAK_CLIENT_ID: ${KC_CLIENT_ID:-frontend}
+    depends_on:
+      - api
+
+  # einmaliger Setup-Container: npx create-vite + npm install
+  # Aufruf: docker compose -f docker-compose.yml -f docker-compose.dev.yaml run --rm node sh
+  # node:
+  #   image: node:20-alpine
+  #   working_dir: /workspace
+  #   volumes:
+  #     - .:/workspace:rw
+  #   entrypoint: sh
+  #   profiles:
+  #     - setup

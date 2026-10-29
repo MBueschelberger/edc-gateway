@@ -1,0 +1,115 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: consume-asset-2-ckan
+  namespace: argo
+spec:
+  entrypoint: consume-and-upload
+  serviceAccountName: argo
+  imagePullSecrets:
+    - name: docker-registry
+  arguments:
+    parameters:
+      - name: edc_id
+      - name: asset_id
+      - name: consumer_url
+      - name: provider_did
+      - name: provider_bpn
+      - name: provider_dsp_url
+      - name: use_2025_1
+        value: "false"
+      - name: use_edrs
+        value: "true"
+      - name: use_bpn
+        value: "false"
+      - name: contract_negotiation_router
+        value: "edrs"
+      - name: add_membership
+        value: "false"
+      - name: debug
+        value: "false"
+
+  templates:
+    - name: consume-and-upload
+      inputs:
+        parameters:
+          - name: edc_id
+          - name: asset_id
+          - name: consumer_url
+          - name: provider_did
+          - name: provider_bpn
+          - name: provider_dsp_url
+          - name: use_2025_1
+          - name: use_edrs
+          - name: use_bpn
+          - name: contract_negotiation_router
+          - name: add_membership
+          - name: debug
+      steps:
+        - - name: consume
+            templateRef:
+              name: consume-asset
+              template: consume
+            arguments:
+              parameters:
+                - name: edc_id
+                  value: "{{inputs.parameters.edc_id}}"
+                - name: asset_id
+                  value: "{{inputs.parameters.asset_id}}"
+                - name: consumer_url
+                  value: "{{inputs.parameters.consumer_url}}"
+                - name: provider_did
+                  value: "{{inputs.parameters.provider_did}}"
+                - name: provider_bpn
+                  value: "{{inputs.parameters.provider_bpn}}"
+                - name: provider_dsp_url
+                  value: "{{inputs.parameters.provider_dsp_url}}"
+                - name: use_2025_1
+                  value: "{{inputs.parameters.use_2025_1}}"
+                - name: use_edrs
+                  value: "{{inputs.parameters.use_edrs}}"
+                - name: use_bpn
+                  value: "{{inputs.parameters.use_bpn}}"
+                - name: contract_negotiation_router
+                  value: "{{inputs.parameters.contract_negotiation_router}}"
+                - name: add_membership
+                  value: "{{inputs.parameters.add_membership}}"
+                - name: debug
+                  value: "{{inputs.parameters.debug}}"
+        - - name: upload
+            templateRef:
+              name: asset-2-ckan
+              template: upload
+            arguments:
+              parameters:
+                - name: edc_id
+                  value: "{{inputs.parameters.edc_id}}"
+                - name: asset_title
+                  value: "{{steps.consume.outputs.parameters.asset_title}}"
+                - name: asset_description
+                  value: "{{steps.consume.outputs.parameters.asset_description}}"
+                - name: output_filename
+                  value: "{{steps.consume.outputs.parameters.output_filename}}"
+              artifacts:
+                - name: asset-data
+                  from: "{{steps.consume.outputs.artifacts.asset-data}}"
+      outputs:
+        parameters:
+          - name: output_filename
+            valueFrom:
+              parameter: "{{steps.consume.outputs.parameters.output_filename}}"
+          - name: content_type
+            valueFrom:
+              parameter: "{{steps.consume.outputs.parameters.content_type}}"
+          - name: asset_title
+            valueFrom:
+              parameter: "{{steps.consume.outputs.parameters.asset_title}}"
+          - name: asset_description
+            valueFrom:
+              parameter: "{{steps.consume.outputs.parameters.asset_description}}"
+          - name: ckan_dataset_url
+            valueFrom:
+              parameter: "{{steps.upload.outputs.parameters.ckan_dataset_url}}"
+          - name: ckan_resource_url
+            valueFrom:
+              parameter: "{{steps.upload.outputs.parameters.ckan_resource_url}}"

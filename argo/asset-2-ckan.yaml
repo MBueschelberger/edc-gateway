@@ -1,0 +1,160 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: asset-2-ckan
+  namespace: argo
+spec:
+  entrypoint: upload
+  serviceAccountName: argo
+  imagePullSecrets:
+    - name: docker-registry
+  arguments:
+    parameters:
+      - name: edc_id
+      - name: asset_title
+      - name: asset_description
+        value: ""
+      - name: output_filename
+        value: ""
+
+  templates:
+    - name: upload
+      inputs:
+        parameters:
+          - name: edc_id
+          - name: asset_title
+          - name: asset_description
+          - name: output_filename
+        artifacts:
+          - name: asset-data
+      steps:
+        - - name: generate-metadata
+            template: generate-metadata
+            arguments:
+              parameters:
+                - name: edc_id
+                  value: "{{inputs.parameters.edc_id}}"
+                - name: asset_title
+                  value: "{{inputs.parameters.asset_title}}"
+                - name: asset_description
+                  value: "{{inputs.parameters.asset_description}}"
+                - name: output_filename
+                  value: "{{inputs.parameters.output_filename}}"
+              artifacts:
+                - name: asset-data
+                  from: "{{inputs.artifacts.asset-data}}"
+        - - name: ckan-upload
+            template: ckan-upload
+            arguments:
+              parameters:
+                - name: edc_id
+                  value: "{{inputs.parameters.edc_id}}"
+                - name: asset_title
+                  value: "{{inputs.parameters.asset_title}}"
+                - name: output_filename
+                  value: "{{inputs.parameters.output_filename}}"
+              artifacts:
+                - name: metadata
+                  from: "{{steps.generate-metadata.outputs.artifacts.metadata}}"
+                - name: asset-upload
+                  from: "{{steps.generate-metadata.outputs.artifacts.asset-upload}}"
+      outputs:
+        parameters:
+          - name: ckan_dataset_url
+            valueFrom:
+              parameter: "{{steps.ckan-upload.outputs.parameters.ckan_dataset_url}}"
+          - name: ckan_resource_url
+            valueFrom:
+              parameter: "{{steps.ckan-upload.outputs.parameters.ckan_resource_url}}"
+
+    - name: generate-metadata
+      inputs:
+        parameters:
+          - name: edc_id
+          - name: asset_title
+          - name: asset_description
+          - name: output_filename
+        artifacts:
+          - name: asset-data
+            path: /tmp/asset-data
+      container:
+        image: container-registry.gitlab.cc-asp.fraunhofer.de/sit/edc-gateway/workflows:latest
+        imagePullPolicy: Always
+        command: ["python3", "/scripts/generate-metadata.py"]
+        env:
+          - name: ASSET_TITLE
+            value: "{{inputs.parameters.asset_title}}"
+          - name: ASSET_DESCRIPTION
+            value: "{{inputs.parameters.asset_description}}"
+          - name: ASSET_FILE
+            value: "/tmp/asset-data"
+          - name: OUTPUT_FILENAME
+            value: "{{inputs.parameters.output_filename}}"
+          - name: CKAN_OWNER_ORG
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: target_storage_owner_org_id
+      outputs:
+        artifacts:
+          - name: metadata
+            path: /tmp/metadata.py
+            archive:
+              none: {}
+          - name: asset-upload
+            path: /tmp/asset-upload
+
+    - name: ckan-upload
+      inputs:
+        parameters:
+          - name: edc_id
+          - name: asset_title
+          - name: output_filename
+          - name: metadata_path
+            value: "/tmp/metadata.py:metadata"
+        artifacts:
+          - name: metadata
+            path: /tmp/metadata.py
+          - name: asset-upload
+            path: /tmp/asset-upload
+      container:
+        image: container-registry.gitlab.cc-asp.fraunhofer.de/sit/edc-gateway/workflows:latest
+        imagePullPolicy: Always
+        command: ["/bin/bash", "/scripts/ckan-upload.sh"]
+        env:
+          - name: ASSET_TITLE
+            value: "{{inputs.parameters.asset_title}}"
+          - name: ASSET_FILE
+            value: "/tmp/asset-upload"
+          - name: OUTPUT_FILENAME
+            value: "{{inputs.parameters.output_filename}}"
+          - name: METADATA
+            value: "{{inputs.parameters.metadata_path}}"
+          - name: GENERATE_RANDOM_PACKAGE_TITLE
+            value: "true"
+          - name: CKAN_URL
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: target_storage_url
+                optional: true
+          - name: CKAN_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: target_storage_user_secret
+                optional: true
+          - name: CKAN_OWNER_ORG
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: target_storage_owner_org_id
+                optional: true
+      outputs:
+        parameters:
+          - name: ckan_dataset_url
+            valueFrom:
+              path: /tmp/ckan_dataset_url.txt
+          - name: ckan_resource_url
+            valueFrom:
+              path: /tmp/ckan_resource_url.txt

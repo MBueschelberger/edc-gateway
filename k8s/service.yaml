@@ -1,0 +1,38 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: edc-gateway
+  namespace: edc-gateway
+spec:
+  selector:
+    app: edc-gateway
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+  type: ClusterIP
+
+---
+# Optional: expose via Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: edc-gateway
+  namespace: edc-gateway
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    # Required for SSE streams to not get buffered
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+spec:
+  rules:
+    - host: edc-gateway.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: edc-gateway
+                port:
+                  number: 80

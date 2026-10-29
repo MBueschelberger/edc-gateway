@@ -1,0 +1,71 @@
+---
+# ServiceAccount for the FastAPI deployment
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: edc-gateway
+  namespace: edc-gateway
+
+---
+# FastAPI needs to create/read/update/delete secrets in its own namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: edc-gateway-secret-manager
+  namespace: edc-gateway
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: edc-gateway-secret-manager
+  namespace: edc-gateway
+subjects:
+  - kind: ServiceAccount
+    name: edc-gateway
+    namespace: edc-gateway
+roleRef:
+  kind: Role
+  name: edc-gateway-secret-manager
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ServiceAccount for Argo workflow pods
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: edc-gateway-workflow
+  namespace: argo
+
+---
+# Argo workflow pods need to read secrets from the edc-gateway namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: edc-gateway-workflow-secret-reader
+  namespace: edc-gateway
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+    # Restrict to only EDC credential secrets
+    resourceNames: []  # Leave empty to allow all, or list specific secret names
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: edc-gateway-workflow-secret-reader
+  namespace: edc-gateway
+subjects:
+  - kind: ServiceAccount
+    name: edc-gateway-workflow
+    namespace: argo
+roleRef:
+  kind: Role
+  name: edc-gateway-workflow-secret-reader
+  apiGroup: rbac.authorization.k8s.io

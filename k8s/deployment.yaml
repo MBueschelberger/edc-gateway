@@ -1,0 +1,139 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: edc-gateway
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: edc-gateway
+  namespace: edc-gateway
+  labels:
+    app: edc-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: edc-gateway
+  template:
+    metadata:
+      labels:
+        app: edc-gateway
+    spec:
+      serviceAccountName: edc-gateway
+      containers:
+        - name: api
+          image: edc-gateway:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: K8S_IN_CLUSTER
+              value: "true"
+            - name: K8S_NAMESPACE
+              value: "edc-gateway"
+            - name: EDC_GATEWAY_POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: edc-gateway-app-secrets
+                  key: postgres_user
+            - name: EDC_GATEWAY_POSTGRES_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: edc-gateway-app-secrets
+                  key: postgres_secret
+            - name: EDC_GATEWAY_POSTGRES_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: edc-gateway-app-secrets
+                  key: postgres_host
+            - name: EDC_GATEWAY_POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: edc-gateway-app-secrets
+                  key: postgres_db
+            - name: SECRET_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: edc-gateway-app-secrets
+                  key: encryption_key
+            - name: OIDC_JWKS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: edc-gateway-config
+                  key: oidc_jwks_url
+            - name: OIDC_ISSUER
+              valueFrom:
+                configMapKeyRef:
+                  name: edc-gateway-config
+                  key: oidc_issuer
+            - name: OIDC_AUDIENCE
+              valueFrom:
+                configMapKeyRef:
+                  name: edc-gateway-config
+                  key: oidc_audience
+            - name: ARGO_SERVER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: edc-gateway-config
+                  key: argo_server_url
+            - name: ARGO_NAMESPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: edc-gateway-config
+                  key: argo_namespace
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: edc-gateway-config
+  namespace: edc-gateway
+data:
+  oidc_jwks_url: "https://keycloak.example.com/realms/myrealm/protocol/openid-connect/certs"
+  oidc_issuer: "https://keycloak.example.com/realms/myrealm"
+  oidc_audience: "edc-gateway"
+  argo_server_url: "https://argo-server.argo.svc.cluster.local:2746"
+  argo_namespace: "argo"
+
+---
+# Create this secret separately with real values — never commit the actual secret!
+# kubectl create secret generic edc-gateway-app-secrets \
+#   --from-literal=postgres_user='edc_gateway' \
+#   --from-literal=postgres_secret='CHANGE_ME' \
+#   --from-literal=postgres_host='postgres' \
+#   --from-literal=postgres_db='edc_gateway' \
+#   --from-literal=encryption_key='<fernet-key>' \
+#   -n edc-gateway
+apiVersion: v1
+kind: Secret
+metadata:
+  name: edc-gateway-app-secrets
+  namespace: edc-gateway
+stringData:
+  postgres_user: "edc_gateway"
+  postgres_secret: "CHANGE_ME"
+  postgres_host: "postgres"
+  postgres_db: "edc_gateway"
+  encryption_key: "CHANGE_ME"

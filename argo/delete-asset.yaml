@@ -1,0 +1,47 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: delete-asset
+  namespace: argo
+spec:
+  entrypoint: delete
+  serviceAccountName: argo
+  imagePullSecrets:
+    - name: docker-registry
+  arguments:
+    parameters:
+      - name: edc_id
+      - name: asset_id
+      - name: provider_url
+      - name: debug
+        value: "false"
+
+  templates:
+    - name: delete
+      inputs:
+        parameters:
+          - name: edc_id
+          - name: asset_id
+          - name: provider_url
+          - name: debug
+      container:
+        image: container-registry.gitlab.cc-asp.fraunhofer.de/sit/edc-gateway/workflows:latest
+        imagePullPolicy: Always
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            ASSET_ID="{{inputs.parameters.asset_id}}"
+            ASSET_UUID="${ASSET_ID#urn:uuid:}"
+
+            bash /scripts/delete-asset.sh "$ASSET_UUID"
+        env:
+          - name: PROVIDER_URL
+            value: "{{inputs.parameters.provider_url}}"
+          - name: DEBUG
+            value: "{{inputs.parameters.debug}}"
+          - name: PROVIDER_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: provider_api_key
+                optional: true

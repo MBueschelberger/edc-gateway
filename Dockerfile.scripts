@@ -1,0 +1,29 @@
+FROM alpine:3.20
+
+RUN apk update && apk upgrade
+RUN apk add --no-cache bash curl git jq python3 py3-pip uuidgen
+
+# Copy the env-loader helper
+WORKDIR /scripts
+
+# Copy the EDC shell scripts from the edc-example-scripts repo.
+# Build context must be the parent directory of both repos:
+#   docker build -f edc-gateway/Dockerfile.scripts \
+#                --build-arg SCRIPTS_DIR=edc-example-scripts/examples \
+#                -t edc-gateway-scripts:latest .
+ARG SCRIPTS_DIR=examples/workflows
+COPY ${SCRIPTS_DIR}/consume-asset.sh /scripts/consume-asset.sh
+COPY ${SCRIPTS_DIR}/create-asset.sh  /scripts/create-asset.sh
+COPY ${SCRIPTS_DIR}/delete-asset.sh  /scripts/delete-asset.sh
+
+COPY argo/scripts/generate-metadata.py /scripts/generate-metadata.py
+COPY argo/scripts/ckan-upload.sh        /scripts/ckan-upload.sh
+COPY argo/scripts/ckan-query-urls.py    /scripts/ckan-query-urls.py
+
+RUN git clone https://gitlab.cc-asp.fraunhofer.de/sit/ckan-multi-upload-template.git
+RUN pip3 install --break-system ./ckan-multi-upload-template
+
+RUN chmod +x /scripts/*.sh /scripts/*.py
+
+RUN adduser -D scriptuser
+USER scriptuser

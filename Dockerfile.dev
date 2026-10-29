@@ -1,0 +1,13 @@
+FROM python:3.11-slim
+
+RUN apt update && apt upgrade -y && apt install -y git
+
+WORKDIR /app
+
+COPY pyproject.toml .
+RUN pip install --upgrade pip wheel setuptools \
+ && pip install --no-cache-dir -e ".[dev]"
+RUN git config --global --add safe.directory /app
+
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

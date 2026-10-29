@@ -1,0 +1,152 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: create-asset
+  namespace: argo
+spec:
+  entrypoint: create
+  serviceAccountName: argo
+  imagePullSecrets:
+    - name: docker-registry
+  arguments:
+    parameters:
+      - name: edc_id
+      - name: provider_url
+      - name: provider_submodel_server
+      - name: consumer_bpn
+      - name: asset_path
+      - name: asset_name
+      - name: asset_description
+        value: ""
+      - name: asset_type
+        value: "application/json"
+      - name: asset_subtype
+        value: ""
+      - name: asset_id_short
+        value: ""
+      - name: data_address_base_url
+        value: ""
+      - name: data_address_name
+        value: ""
+      - name: full_policy
+        value: "false"
+
+  templates:
+    - name: create
+      inputs:
+        parameters:
+          - name: edc_id
+          - name: provider_url
+          - name: provider_submodel_server
+          - name: consumer_bpn
+          - name: asset_path
+          - name: asset_name
+          - name: asset_description
+          - name: asset_type
+          - name: asset_subtype
+          - name: asset_id_short
+          - name: data_address_base_url
+          - name: data_address_name
+          - name: full_policy
+      container:
+        image: container-registry.gitlab.cc-asp.fraunhofer.de/sit/edc-gateway/workflows:latest
+        imagePullPolicy: Always
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            export OAUTH2_GRANT_TYPE="${OAUTH2_GRANT_TYPE:-client_credentials}"
+
+            if [ -n "{{inputs.parameters.data_address_base_url}}" ]; then
+              export DATA_ADDRESS_BASE_URL="{{inputs.parameters.data_address_base_url}}"
+            fi
+            if [ -n "{{inputs.parameters.data_address_name}}" ]; then
+              export DATA_ADDRESS_NAME="{{inputs.parameters.data_address_name}}"
+            fi
+
+            POLICY_FLAG=""
+            if [ "{{inputs.parameters.full_policy}}" = "true" ]; then
+              POLICY_FLAG="--full-policy"
+            fi
+
+            bash /scripts/create-asset.sh $POLICY_FLAG
+        env:
+          - name: PROVIDER_URL
+            value: "{{inputs.parameters.provider_url}}"
+          - name: PROVIDER_SUBMODEL_SERVER
+            value: "{{inputs.parameters.provider_submodel_server}}"
+          - name: CONSUMER_BPN
+            value: "{{inputs.parameters.consumer_bpn}}"
+          - name: ASSET_PATH
+            value: "{{inputs.parameters.asset_path}}"
+          - name: ASSET_NAME
+            value: "{{inputs.parameters.asset_name}}"
+          - name: ASSET_DESCRIPTION
+            value: "{{inputs.parameters.asset_description}}"
+          - name: ASSET_TYPE
+            value: "{{inputs.parameters.asset_type}}"
+          - name: ASSET_SUBTYPE
+            value: "{{inputs.parameters.asset_subtype}}"
+          - name: ASSET_ID_SHORT
+            value: "{{inputs.parameters.asset_id_short}}"
+          - name: CONSUMER_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: consumer_api_key
+                optional: true
+          - name: PROVIDER_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: provider_api_key
+                optional: true
+          - name: CLIENT_CERT_PATH
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: client_cert_path
+                optional: true
+          - name: CLIENT_CERT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: client_cert_password
+                optional: true
+          - name: OAUTH2_TOKEN_URL
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: oauth2_token_url
+                optional: true
+          - name: OAUTH2_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: oauth2_client_id
+                optional: true
+          - name: OAUTH2_CLIENT_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: oauth2_client_secret_key
+                optional: true
+          - name: OAUTH2_GRANT_TYPE
+            valueFrom:
+              secretKeyRef:
+                name: "edc-{{inputs.parameters.edc_id}}-credentials"
+                key: oauth2_grant_type
+                optional: true
+      outputs:
+        parameters:
+          - name: asset_id
+            valueFrom:
+              path: /tmp/asset_id.txt
+          - name: usage_policy_id
+            valueFrom:
+              path: /tmp/usage_policy_id.txt
+          - name: access_policy_id
+            valueFrom:
+              path: /tmp/access_policy_id.txt
+          - name: contract_definition_id
+            valueFrom:
+              path: /tmp/contract_definition_id.txt

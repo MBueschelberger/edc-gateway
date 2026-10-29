@@ -1,0 +1,7 @@
+
+services:
+  app:
+    image: ghcr.io/mbueschelberger/edc-gateway-scripts:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.scripts
