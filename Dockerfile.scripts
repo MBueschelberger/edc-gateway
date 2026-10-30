@@ -20,8 +20,8 @@ COPY argo/scripts/generate-metadata.py /scripts/generate-metadata.py
 COPY argo/scripts/ckan-upload.sh        /scripts/ckan-upload.sh
 COPY argo/scripts/ckan-query-urls.py    /scripts/ckan-query-urls.py
 
-RUN git clone https://gitlab.cc-asp.fraunhofer.de/sit/ckan-multi-upload-template.git
-RUN pip3 install --break-system ./ckan-multi-upload-template
+RUN git clone https://github.com/MBueschelberger/CKAN-Multi-Upload-Template.git
+RUN pip3 install --break-system ./CKAN-Multi-Upload-Template
 
 RUN chmod +x /scripts/*.sh /scripts/*.py
 
