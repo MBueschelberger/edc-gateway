@@ -78,7 +78,7 @@ spec:
           - name: asset-data
             path: /tmp/asset-data
       container:
-        image: container-registry.gitlab.cc-asp.fraunhofer.de/sit/edc-gateway/workflows:latest
+        image: ghcr.io/mbueschelberger/edc-gateway-scripts:latest
         imagePullPolicy: Always
         command: ["python3", "/scripts/generate-metadata.py"]
         env:
@@ -118,7 +118,7 @@ spec:
           - name: asset-upload
             path: /tmp/asset-upload
       container:
-        image: container-registry.gitlab.cc-asp.fraunhofer.de/sit/edc-gateway/workflows:latest
+        image: ghcr.io/mbueschelberger/edc-gateway-scripts:latest
         imagePullPolicy: Always
         command: ["/bin/bash", "/scripts/ckan-upload.sh"]
         env:

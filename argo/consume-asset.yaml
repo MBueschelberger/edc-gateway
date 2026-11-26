@@ -46,7 +46,7 @@ spec:
           - name: add_membership
           - name: debug
       container:
-        image: container-registry.gitlab.cc-asp.fraunhofer.de/sit/edc-gateway/workflows:latest
+        image: ghcr.io/mbueschelberger/edc-gateway-scripts:latest
         imagePullPolicy: Always
         command: ["/bin/bash", "-c"]
         args:

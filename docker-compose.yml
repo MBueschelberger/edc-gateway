@@ -19,7 +19,7 @@ services:
       K8S_IN_CLUSTER: "false"
       EDC_GATEWAY_POSTGRES_HOST: db
     volumes:
-      - ${K8S_KUBE_CONIG_PATH}:/root/.kube/config:ro
+      - ${K8S_KUBE_CONIG_PATH}:/home/appuser/.kube/config:ro
     restart: always
     depends_on:
       db:
