@@ -49,7 +49,7 @@ spec:
           - name: data_address_name
           - name: full_policy
       container:
-        image: container-registry.gitlab.cc-asp.fraunhofer.de/sit/edc-gateway/workflows:latest
+        image: ghcr.io/mbueschelberger/edc-gateway-scripts:latest
         imagePullPolicy: Always
         command: ["/bin/bash", "-c"]
         args:
